@@ -34,17 +34,20 @@ class VlessParser {
   }
 
   #extractRemark(uri) {
-    return uri.split("#")[1];
+    const remark = uri.split("#")[1];
+
+    return remark ? decodeURIComponent(remark) : undefined;
   }
 
   #extractMain(uri) {
     const uriMain = uri.split("?")[0];
+    const [uuidPart, hostPort] = uriMain.split("@");
+    if (!uuidPart || !hostPort) throw new Error("Invalid VLESS main part");
 
-    return {
-      uuid: uriMain.split("@")[0],
-      host: uriMain.split("@")[1].split(":")[0],
-      port: Number(uriMain.split(":")[1]),
-    };
+    const [host, portStr] = hostPort.split(":");
+    if (!host || !portStr) throw new Error("Invalid VLESS host/port");
+
+    return { uuid: uuidPart, host, port: Number(portStr) };
   }
 
   #extractQueryParams(uri) {
