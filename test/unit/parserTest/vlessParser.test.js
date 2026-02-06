@@ -25,8 +25,9 @@ describe("Vless Parser Test", () => {
 
   it("Wrong URI", () => {
     const uri = "vmess://xxxx";
-    const result = vlessParserInstance.parseVlessUri(uri);
 
-    expect(result).throws();
+    expect(() => vlessParserInstance.parseVlessUri(uri)).to.throw(
+      "Invalid Protocol",
+    );
   });
 });

@@ -1,28 +1,32 @@
 class VlessParser {
   parseVlessUri(uri) {
-    if (!this.#isProtocolValid(uri)) throw new Error("Invalid Protocol");
+    try {
+      if (!this.#isProtocolValid(uri)) throw new Error("Invalid Protocol");
 
-    const newUri = uri.replace("vless://", "");
+      const newUri = uri.replace("vless://", "");
 
-    const remark = this.#extractRemark(newUri) || "";
+      const remark = this.#extractRemark(newUri) || "";
 
-    const { uuid, host, port } = this.#extractMain(newUri);
+      const { uuid, host, port } = this.#extractMain(newUri);
 
-    const { encryption, security, network, path, sni, flow } =
-      this.#extractQueryParams(newUri);
+      const { encryption, security, network, path, sni, flow } =
+        this.#extractQueryParams(newUri);
 
-    return {
-      uuid,
-      host,
-      port,
-      encryption,
-      security,
-      network,
-      path,
-      sni,
-      flow,
-      remark,
-    };
+      return {
+        uuid,
+        host,
+        port,
+        encryption,
+        security,
+        network,
+        path,
+        sni,
+        flow,
+        remark,
+      };
+    } catch (error) {
+      throw new Error(error?.message);
+    }
   }
 
   #isProtocolValid(uri) {
@@ -56,7 +60,7 @@ class VlessParser {
         flow: undefined,
       };
 
-    const cleanQuery = queryPart.split("#")[0];
+    const cleanQuery = uriQuery.split("#")[0];
 
     const params = new URLSearchParams(cleanQuery);
 
