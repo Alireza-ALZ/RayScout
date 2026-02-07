@@ -19,7 +19,7 @@ describe("Vless Parser Test", () => {
       path: "/ws",
       sni: "domain.com",
       flow: undefined,
-      remark: "My%20VLESS",
+      remark: "My VLESS",
     });
   });
 
