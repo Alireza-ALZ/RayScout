@@ -1,4 +1,5 @@
 const ConfigFactory = require("./src/factory/configFactory");
+const XrayConfigBuilder = require("./src/xray/XrayConfigBuilder");
 
 const allConfigs = [
   "vless://UUID@domain.com:443?type=ws&security=tls&path=%2Fws&sni=domain.com#My%20VLESS",
@@ -7,4 +8,6 @@ const allConfigs = [
 
 const result = ConfigFactory.processConfigs(allConfigs);
 
-console.log(result);
+const configsJson = new XrayConfigBuilder().createJsonObject(result);
+
+console.log(configsJson);
