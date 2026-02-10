@@ -1,5 +1,5 @@
 class XrayConfigBuilder {
-  constructor(activeOutboundTag = "proxy-0") {
+  constructor(activeOutboundTag) {
     this.activeOutboundTag = activeOutboundTag;
   }
 
@@ -33,7 +33,7 @@ class XrayConfigBuilder {
   }
 
   #outbounds(configs) {
-    return configs.map((conf, index) => conf.toXrayOutbound(`proxy-${index}`));
+    return configs.map((conf, index) => conf.toXrayOutbound());
   }
 
   #routing() {
