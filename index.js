@@ -1,4 +1,5 @@
 const ConfigFactory = require("./src/factory/configFactory");
+const ConfigSelector = require("./src/selector/configSelector");
 const XrayConfigBuilder = require("./src/xray/XrayConfigBuilder");
 
 const allConfigs = [
@@ -6,8 +7,12 @@ const allConfigs = [
   "vmess://eyJhZGQiOiJleGFtcGxlLmNvbSIsInBvcnQiOiI0NDMiLCJpZCI6ImFiYzEtMTIzNCIsImFpZCI6IjAiLCJuZXQiOiJ3cyIsInBhdGgiOiIvd3MiLCJ0bHMiOiJ0bHMiLCJwcyI6Ik15IFZNRVNzIn0=#My VMess Server",
 ];
 
-const result = ConfigFactory.processConfigs(allConfigs);
+const configs = ConfigFactory.processConfigs(allConfigs);
 
-const configsJson = new XrayConfigBuilder().createJsonObject(result);
+const selector = new ConfigSelector(configs);
+selector.selectFirst();
 
-console.log(configsJson);
+const builder = new XrayConfigBuilder();
+const xrayConfig = builder.createJsonObject(configs);
+
+console.log(xrayConfig);
