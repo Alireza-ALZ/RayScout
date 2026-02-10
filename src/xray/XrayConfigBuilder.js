@@ -1,4 +1,8 @@
 class XrayConfigBuilder {
+  constructor(activeOutboundTag = "proxy-0") {
+    this.activeOutboundTag = activeOutboundTag;
+  }
+
   createJsonObject(configs) {
     return {
       log: this.#log(),
@@ -8,15 +12,41 @@ class XrayConfigBuilder {
     };
   }
 
-  #log() {}
-
-  #inbounds() {}
-
-  #outbounds(configs) {
-    return configs.map((conf) => conf.toXrayOutbound());
+  #log() {
+    return {
+      logLevel: "warning",
+    };
   }
 
-  #routing() {}
+  #inbounds() {
+    return [
+      {
+        tag: "socks-in",
+        port: 1080,
+        listen: "127.0.0.1",
+        protocol: "socks",
+        settings: {
+          udp: true,
+        },
+      },
+    ];
+  }
+
+  #outbounds(configs) {
+    return configs.map((conf, index) => conf.toXrayOutbound(`proxy-${index}`));
+  }
+
+  #routing() {
+    return {
+      rules: [
+        {
+          type: "field",
+          inboundTag: ["socks-in"],
+          outboundTag: this.activeOutboundTag,
+        },
+      ],
+    };
+  }
 }
 
 module.exports = XrayConfigBuilder;
