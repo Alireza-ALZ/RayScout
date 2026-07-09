@@ -4,4 +4,6 @@ describe("Unit Test", () => {
   require("./parserTest/vmessParser.test");
 
   require("./factoryTest/configFactory.test");
+
+  require("./probeTest/probeEngine.test");
 });
