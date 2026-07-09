@@ -20,15 +20,22 @@ async function main() {
   const available = probeResults.filter((result) => result.success);
   const unavailable = probeResults.filter((result) => !result.success);
 
+  const report = {
+    total: probeResults.length,
+    availableCount: available.length,
+    unavailableCount: unavailable.length,
+    available,
+    unavailable,
+  };
+
   const builder = new XrayConfigBuilder();
   const xrayConfig = builder.createJsonObject(configs);
 
   console.log(
     JSON.stringify(
       {
+        report,
         probeResults,
-        available,
-        unavailable,
         xrayConfig,
       },
       null,

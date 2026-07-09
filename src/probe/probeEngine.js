@@ -67,7 +67,15 @@ class ProbeEngine {
       throw new Error("configs must be an array");
     }
 
-    return Promise.all(configs.map((config) => this.probeConfig(config)));
+    const results = await Promise.all(
+      configs.map((config) => this.probeConfig(config)),
+    );
+
+    return results.map((result, index) => ({
+      ...result,
+      index,
+      summary: this.#summarizeResult(result),
+    }));
   }
 
   async #probeTcp(config) {
@@ -130,6 +138,18 @@ class ProbeEngine {
       .map((result) => result.latency);
 
     return latencies.length ? Math.min(...latencies) : null;
+  }
+
+  #summarizeResult(result) {
+    if (!result) {
+      return "no-result";
+    }
+
+    if (result.success) {
+      return `available:${result.protocol || "unknown"}:${result.address || "unknown"}:${result.port || "unknown"}`;
+    }
+
+    return `unavailable:${result.protocol || "unknown"}:${result.address || "unknown"}:${result.port || "unknown"}`;
   }
 }
 
