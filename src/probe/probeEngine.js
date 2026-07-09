@@ -29,7 +29,7 @@ class ProbeEngine {
         return this.#buildResult({
           config,
           success: true,
-          status: "reachable",
+          status: "available",
           reason: "tcp_connected",
           latency: this.#minLatency(results),
         });
@@ -40,14 +40,14 @@ class ProbeEngine {
         this.#buildResult({
           config,
           success: false,
-          status: "unreachable",
+          status: "unavailable",
           reason: "tcp_connection_failed",
         });
 
       return this.#buildResult({
         config,
         success: false,
-        status: "unreachable",
+        status: "unavailable",
         reason: lastFailure.reason,
         error: lastFailure.error,
       });
@@ -55,11 +55,19 @@ class ProbeEngine {
       return this.#buildResult({
         config,
         success: false,
-        status: "unreachable",
+        status: "unavailable",
         reason: "probe_error",
         error: error.message,
       });
     }
+  }
+
+  async probeConfigs(configs = []) {
+    if (!Array.isArray(configs)) {
+      throw new Error("configs must be an array");
+    }
+
+    return Promise.all(configs.map((config) => this.probeConfig(config)));
   }
 
   async #probeTcp(config) {

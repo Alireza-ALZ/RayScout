@@ -14,7 +14,7 @@ describe("Config Factory Test", () => {
       {
         protocol: "vless",
         id: undefined,
-        address: undefined,
+        address: "domain.com",
         port: 443,
         remark: "My VLESS",
         uuid: "UUID",
@@ -28,7 +28,7 @@ describe("Config Factory Test", () => {
       {
         protocol: "vmess",
         id: undefined,
-        address: undefined,
+        address: "example.com",
         port: 443,
         remark: "My VMess Server",
         uuid: "abc1-1234",

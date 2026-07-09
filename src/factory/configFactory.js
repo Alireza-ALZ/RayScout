@@ -16,12 +16,22 @@ class ConfigFactory {
   }
 
   #parseConfig(configUri) {
+    let parsedConfig;
+
     if (configUri.startsWith("vless")) {
-      return createConfig("vless", new VlessParser().parseVlessUri(configUri));
+      parsedConfig = new VlessParser().parseVlessUri(configUri);
+      return createConfig("vless", {
+        ...parsedConfig,
+        address: parsedConfig.address || parsedConfig.host,
+      });
     }
-    
+
     if (configUri.startsWith("vmess")) {
-      return createConfig("vmess", new VmessParser().parseVmessUri(configUri));
+      parsedConfig = new VmessParser().parseVmessUri(configUri);
+      return createConfig("vmess", {
+        ...parsedConfig,
+        address: parsedConfig.address || parsedConfig.host,
+      });
     }
 
     throw new Error("Unsupproted protocol");

@@ -17,7 +17,7 @@ describe("Probe Engine Test", () => {
     server.close(done);
   });
 
-  it("marks a reachable config as reachable", async () => {
+  it("marks a available config as available", async () => {
     const probe = new ProbeEngine({ timeout: 1000 });
     const result = await probe.probeConfig({
       address: "127.0.0.1",
@@ -26,11 +26,11 @@ describe("Probe Engine Test", () => {
     });
 
     expect(result.success).to.equal(true);
-    expect(result.status).to.equal("reachable");
+    expect(result.status).to.equal("available");
     expect(result.reason).to.equal("tcp_connected");
   });
 
-  it("marks an unreachable config as unreachable", async () => {
+  it("marks an unavailable config as unavailable", async () => {
     const probe = new ProbeEngine({ timeout: 400 });
     const result = await probe.probeConfig({
       address: "127.0.0.1",
@@ -39,6 +39,32 @@ describe("Probe Engine Test", () => {
     });
 
     expect(result.success).to.equal(false);
-    expect(result.status).to.equal("unreachable");
+    expect(result.status).to.equal("unavailable");
+  });
+
+  it("probes multiple configs and returns a batch report", async () => {
+    const probe = new ProbeEngine({ timeout: 400 });
+    const results = await probe.probeConfigs([
+      {
+        id: "available-config",
+        address: "127.0.0.1",
+        port: server.address().port,
+        protocol: "vless",
+      },
+      {
+        id: "unavailable-config",
+        address: "127.0.0.1",
+        port: 65534,
+        protocol: "vmess",
+      },
+    ]);
+
+    expect(results).to.have.lengthOf(2);
+    expect(
+      results.find((item) => item.configId === "available-config").success,
+    ).to.equal(true);
+    expect(
+      results.find((item) => item.configId === "unavailable-config").success,
+    ).to.equal(false);
   });
 });
