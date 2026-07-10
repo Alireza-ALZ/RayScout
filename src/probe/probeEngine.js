@@ -1,6 +1,7 @@
 const dns = require("dns");
 const net = require("net");
 const tls = require("tls");
+const { probeWebSocket } = require("./wsProbe");
 
 class ProbeEngine {
   constructor(options = {}) {
@@ -32,7 +33,9 @@ class ProbeEngine {
 
       const attempts = [];
       for (let attempt = 0; attempt < this.retries; attempt += 1) {
-        if (String(config.security || "").toLowerCase() === "tls") {
+        if (String(config.network || "").toLowerCase() === "ws") {
+          attempts.push(this.#probeWs(config));
+        } else if (String(config.security || "").toLowerCase() === "tls") {
           attempts.push(this.#probeTls(config));
         } else {
           attempts.push(this.#probeTcp(config));
@@ -146,6 +149,10 @@ class ProbeEngine {
         resolve({ success: true });
       });
     });
+  }
+
+  async #probeWs(config) {
+    return probeWebSocket(config, this.timeout);
   }
 
   async #probeTls(config) {

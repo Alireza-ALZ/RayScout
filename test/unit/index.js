@@ -6,4 +6,6 @@ describe("Unit Test", () => {
   require("./factoryTest/configFactory.test");
 
   require("./probeTest/probeEngine.test");
+
+  require("./probeTest/wsProbe.test");
 });
