@@ -1,3 +1,4 @@
+const dns = require("dns");
 const net = require("net");
 
 class ProbeEngine {
@@ -13,6 +14,27 @@ class ProbeEngine {
         success: false,
         status: "invalid",
         reason: "missing_address_or_port",
+      });
+    }
+
+    try {
+      const dnsResult = await this.#resolveDns(config.address);
+      if (!dnsResult.success) {
+        return this.#buildResult({
+          config,
+          success: false,
+          status: "invalid",
+          reason: "dns_resolution_failed",
+          error: dnsResult.error,
+        });
+      }
+    } catch (error) {
+      return this.#buildResult({
+        config,
+        success: false,
+        status: "invalid",
+        reason: "dns_resolution_failed",
+        error: error.message,
       });
     }
 
@@ -76,6 +98,19 @@ class ProbeEngine {
       index,
       summary: this.#summarizeResult(result),
     }));
+  }
+
+  async #resolveDns(address) {
+    return new Promise((resolve) => {
+      dns.lookup(address, (error) => {
+        if (error) {
+          resolve({ success: false, error: error.message });
+          return;
+        }
+
+        resolve({ success: true });
+      });
+    });
   }
 
   async #probeTcp(config) {

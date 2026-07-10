@@ -42,6 +42,19 @@ describe("Probe Engine Test", () => {
     expect(result.status).to.equal("unavailable");
   });
 
+  it("marks a config with an unresolved host as invalid", async () => {
+    const probe = new ProbeEngine({ timeout: 400 });
+    const result = await probe.probeConfig({
+      address: "this-host-should-not-resolve.invalid",
+      port: 443,
+      protocol: "vless",
+    });
+
+    expect(result.success).to.equal(false);
+    expect(result.status).to.equal("invalid");
+    expect(result.reason).to.equal("dns_resolution_failed");
+  });
+
   it("probes multiple configs and returns a batch report", async () => {
     const probe = new ProbeEngine({ timeout: 400 });
     const results = await probe.probeConfigs([
