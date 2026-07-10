@@ -2,11 +2,17 @@ const dns = require("dns");
 const net = require("net");
 const tls = require("tls");
 const { probeWebSocket } = require("./wsProbe");
+const XrayRunner = require("../xray/XrayRunner");
+const XrayConfigBuilder = require("../xray/XrayConfigBuilder");
 
 class ProbeEngine {
   constructor(options = {}) {
     this.timeout = options.timeout || 3000;
     this.retries = options.retries || 1;
+    this.xrayBinaryPath = options.xrayBinaryPath || null;
+    this.xrayRunnerClass = options.xrayRunnerClass || XrayRunner;
+    this.xrayConfigBuilderClass =
+      options.xrayConfigBuilderClass || XrayConfigBuilder;
   }
 
   async probeConfig(config) {
@@ -28,6 +34,18 @@ class ProbeEngine {
           status: "invalid",
           reason: "dns_resolution_failed",
           error: dnsResult.error,
+        });
+      }
+
+      if (this.xrayBinaryPath && typeof config.toXrayOutbound === "function") {
+        const xrayResult = await this.#probeViaXray(config);
+        return this.#buildResult({
+          config,
+          success: xrayResult.success,
+          status: xrayResult.success ? "available" : "unavailable",
+          reason: xrayResult.reason,
+          latency: xrayResult.latency,
+          error: xrayResult.error,
         });
       }
 
@@ -188,6 +206,83 @@ class ProbeEngine {
           success: false,
           reason: "tls_handshake_failed",
           error: err.message,
+          latency: Date.now() - start,
+        });
+      });
+    });
+  }
+
+  async #probeViaXray(config) {
+    const start = Date.now();
+
+    if (!config || typeof config.toXrayOutbound !== "function") {
+      return {
+        success: false,
+        reason: "unsupported_config",
+        error: "Config does not implement toXrayOutbound()",
+      };
+    }
+
+    const builder = new this.xrayConfigBuilderClass(config.id || "outbound-0");
+    const xrayConfig = builder.createJsonObject([config]);
+    const runner = new this.xrayRunnerClass(this.xrayBinaryPath);
+
+    try {
+      runner.start(xrayConfig);
+    } catch (error) {
+      return {
+        success: false,
+        reason: "xray_start_failed",
+        error: error.message,
+      };
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const startupDelay = Math.max(50, Math.min(1000, this.timeout));
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        if (typeof runner.stop === "function") {
+          runner.stop();
+        }
+        resolve(result);
+      };
+
+      const timeout = setTimeout(() => {
+        finish({
+          success: true,
+          reason: "xray_started",
+          latency: Date.now() - start,
+        });
+      }, startupDelay);
+
+      if (!runner.process || typeof runner.process.once !== "function") {
+        clearTimeout(timeout);
+        return finish({
+          success: false,
+          reason: "xray_runner_no_process",
+          error: "Xray runner did not expose a process event emitter",
+        });
+      }
+
+      runner.process.once("error", (error) => {
+        clearTimeout(timeout);
+        finish({
+          success: false,
+          reason: "xray_process_error",
+          error: error?.message || String(error),
+          latency: Date.now() - start,
+        });
+      });
+
+      runner.process.once("exit", (code, signal) => {
+        clearTimeout(timeout);
+        finish({
+          success: false,
+          reason: "xray_process_exited",
+          error: `Xray exited with code ${code}${signal ? ` signal ${signal}` : ""}`,
           latency: Date.now() - start,
         });
       });

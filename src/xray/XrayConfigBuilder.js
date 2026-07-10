@@ -33,7 +33,19 @@ class XrayConfigBuilder {
   }
 
   #outbounds(configs) {
-    return configs.map((conf, index) => conf.toXrayOutbound());
+    const outbounds = configs.map((conf, index) => {
+      const outbound = conf.toXrayOutbound();
+      if (!outbound.tag) {
+        outbound.tag = `outbound-${index}`;
+      }
+      return outbound;
+    });
+
+    if (!this.activeOutboundTag && outbounds.length > 0) {
+      this.activeOutboundTag = outbounds[0].tag;
+    }
+
+    return outbounds;
   }
 
   #routing() {

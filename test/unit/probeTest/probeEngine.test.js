@@ -1,4 +1,5 @@
 const { expect } = require("chai");
+const { EventEmitter } = require("events");
 const net = require("net");
 const ProbeEngine = require("../../../src/probe/probeEngine");
 
@@ -53,6 +54,56 @@ describe("Probe Engine Test", () => {
     expect(result.success).to.equal(false);
     expect(result.status).to.equal("invalid");
     expect(result.reason).to.equal("dns_resolution_failed");
+  });
+
+  it("uses Xray runner when xrayBinaryPath is provided", async () => {
+    const fakeRunner = class FakeXrayRunner extends EventEmitter {
+      constructor() {
+        super();
+        this.process = this;
+      }
+
+      start() {
+        setImmediate(() => {
+          this.emit("error", new Error("fake xray start failure"));
+        });
+      }
+
+      stop() {}
+    };
+
+    const probe = new ProbeEngine({
+      timeout: 400,
+      xrayBinaryPath: "/usr/bin/fake-xray",
+      xrayRunnerClass: fakeRunner,
+    });
+
+    const result = await probe.probeConfig({
+      address: "127.0.0.1",
+      port: server.address().port,
+      protocol: "vless",
+      id: "fake-xray",
+      toXrayOutbound() {
+        return {
+          tag: "fake-xray",
+          protocol: "vless",
+          settings: {
+            vnext: [
+              {
+                address: "127.0.0.1",
+                port: server.address().port,
+                users: [{ id: "uuid" }],
+              },
+            ],
+          },
+        };
+      },
+    });
+
+    expect(result.success).to.equal(false);
+    expect(result.status).to.equal("unavailable");
+    expect(result.reason).to.equal("xray_process_error");
+    expect(result.error).to.equal("fake xray start failure");
   });
 
   it("probes multiple configs and returns a batch report", async () => {

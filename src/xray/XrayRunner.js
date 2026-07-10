@@ -1,9 +1,3 @@
-class XrayRunner {
-  constructor() {}
-}
-
-module.exports = XrayRunner;
-
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
