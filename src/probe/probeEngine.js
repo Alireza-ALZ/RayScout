@@ -1,5 +1,6 @@
 const dns = require("dns");
 const net = require("net");
+const tls = require("tls");
 
 class ProbeEngine {
   constructor(options = {}) {
@@ -28,22 +29,16 @@ class ProbeEngine {
           error: dnsResult.error,
         });
       }
-    } catch (error) {
-      return this.#buildResult({
-        config,
-        success: false,
-        status: "invalid",
-        reason: "dns_resolution_failed",
-        error: error.message,
-      });
-    }
 
-    const attempts = [];
-    for (let attempt = 0; attempt < this.retries; attempt += 1) {
-      attempts.push(this.#probeTcp(config));
-    }
+      const attempts = [];
+      for (let attempt = 0; attempt < this.retries; attempt += 1) {
+        if (String(config.security || "").toLowerCase() === "tls") {
+          attempts.push(this.#probeTls(config));
+        } else {
+          attempts.push(this.#probeTcp(config));
+        }
+      }
 
-    try {
       const results = await Promise.all(attempts);
       const success = results.some((result) => result.success);
 
@@ -52,7 +47,7 @@ class ProbeEngine {
           config,
           success: true,
           status: "available",
-          reason: "tcp_connected",
+          reason: results.find((r) => r.success).reason || "connected",
           latency: this.#minLatency(results),
         });
       }
@@ -100,19 +95,6 @@ class ProbeEngine {
     }));
   }
 
-  async #resolveDns(address) {
-    return new Promise((resolve) => {
-      dns.lookup(address, (error) => {
-        if (error) {
-          resolve({ success: false, error: error.message });
-          return;
-        }
-
-        resolve({ success: true });
-      });
-    });
-  }
-
   async #probeTcp(config) {
     const start = Date.now();
 
@@ -150,6 +132,58 @@ class ProbeEngine {
       });
 
       socket.connect(config.port, config.address);
+    });
+  }
+
+  async #resolveDns(address) {
+    return new Promise((resolve) => {
+      dns.lookup(address, (error) => {
+        if (error) {
+          resolve({ success: false, error: error.message });
+          return;
+        }
+
+        resolve({ success: true });
+      });
+    });
+  }
+
+  async #probeTls(config) {
+    const start = Date.now();
+
+    return new Promise((resolve) => {
+      const options = {
+        host: config.address,
+        port: config.port,
+        servername: config.sni || config.address,
+        rejectUnauthorized: false,
+      };
+
+      const socket = tls.connect(options, () => {
+        const latency = Date.now() - start;
+        socket.end();
+        resolve({ success: true, reason: "tls_handshake_ok", latency });
+      });
+
+      const timeout = setTimeout(() => {
+        socket.destroy();
+        resolve({
+          success: false,
+          reason: "tls_timeout",
+          error: `TLS timed out after ${this.timeout}ms`,
+          latency: this.timeout,
+        });
+      }, this.timeout);
+
+      socket.once("error", (err) => {
+        clearTimeout(timeout);
+        resolve({
+          success: false,
+          reason: "tls_handshake_failed",
+          error: err.message,
+          latency: Date.now() - start,
+        });
+      });
     });
   }
 
